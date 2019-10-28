@@ -27,7 +27,7 @@ void setTotalVelocity(int perc)
 }
 
 /*
-Drives robot forward
+Drives robot forward or backward
 */
 void drive(bool forward) 
 {
@@ -69,6 +69,7 @@ int main()
     if(Controller1.ButtonR2.pressing() && Controller1.ButtonL2.pressing()) 
     {
       drive(true);
+    } else {
       Controller1.ButtonR2.released(stopAll);
       Controller1.ButtonL2.released(stopAll);
     }
@@ -77,12 +78,25 @@ int main()
     if(Controller1.ButtonR1.pressing() && Controller1.ButtonL1.pressing()) 
     {
       drive(false);
-      Controller1.ButtonR1.released(stopAll);
+    } else { Controller1.ButtonR1.released(stopAll);
       Controller1.ButtonL1.released(stopAll);
     }    
 
     //Right
-    Controller1.ButtonA.pressed(turnRight);
+    if(Controller1.ButtonA.pressing()) 
+    {
+      turnRight();
+    } else { 
+      Controller1.ButtonA.released(stopAll);
+    }
+
+    //Left
+    if(Controller1.ButtonY.pressing()) 
+    {
+      turnLeft();
+    } else { 
+      Controller1.ButtonY.released(stopAll);
+    }
 
 
     // ALL STOP
