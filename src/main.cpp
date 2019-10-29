@@ -21,7 +21,7 @@
 using namespace vex;
 
 /*
-  Sets motor velocity to a certain percent
+  Sets velocity for both motors
 */
 void setTotalVelocity(int perc)
 {
@@ -52,11 +52,31 @@ void drive(bool forward, int vel)
 
 /*
   Stops all motors
+  If boolean parameter provided, it will brake instead
 */
-void stopAll()
+void stopAll(bool brake = false)
 {
-  RightMotor.stop();
-  LeftMotor.stop();
+  if(!brake)
+  {
+    RightMotor.stop();
+    LeftMotor.stop();
+  }
+  else
+  {
+    int velAvg = (RightMotor.velocity(percent) + LeftMotor.velocity(percent)) / 2;
+    int newVel = velAvg;
+
+    for(int i = 0; i < velAvg; i++)
+    {
+      newVel = velAvg - i;
+      if(newVel <= 0) stopAll();
+
+      wait(250, msec);
+
+      RightMotor.setVelocity(newVel, percent);
+      LeftMotor.setVelocity(newVel, percent);
+    }
+  }
 }
 
 /*
@@ -80,7 +100,8 @@ void turnRight()
 /*
   Spins robot to the left
 */
-void spinLeft() {
+void spinLeft() 
+{
   LeftMotor.spin(reverse);
   RightMotor.spin(forward);
 }
@@ -88,11 +109,11 @@ void spinLeft() {
 /*
   Spins robot to the right
 */
-void spinRight() {
+void spinRight() 
+{
   RightMotor.spin(reverse);
   LeftMotor.spin(forward);
 }
-
 
 int main()
 {
