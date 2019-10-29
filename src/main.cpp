@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------*/
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
-/*    Author:       C:\Users\1301261566                                       */
+/*    Author:       Saptarshi Mallick, Ojas Sanghi, Khoa Ho                   */
 /*    Created:      Mon Oct 28 2019                                           */
 /*    Description:  V5 project                                                */
 /*                                                                            */
@@ -10,9 +10,9 @@
 // ---- START VEXCODE CONFIGURED DEVICES ----
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
-// LeftMotor            motor         10              
-// RightMotor           motor         1               
-// Controller1          controller                    
+// LeftMotor            motor         10
+// RightMotor           motor         1
+// Controller1          controller
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -20,6 +20,10 @@
 
 using namespace vex;
 
+
+/*
+  Sets motor velocity to a certain percent
+*/
 void setTotalVelocity(int perc)
 {
   RightMotor.setVelocity(perc, percent);
@@ -27,9 +31,10 @@ void setTotalVelocity(int perc)
 }
 
 /*
-Drives robot forward or backward
+  Drives robot forward or backward
+  Overloaded method sets a custom velocity before starting the motors
 */
-void drive(bool forward) 
+void drive(bool forward)
 {
   directionType dir;
 
@@ -40,18 +45,33 @@ void drive(bool forward)
   LeftMotor.spin(dir);
 }
 
+void drive(bool forward, int vel)
+{
+  setTotalVelocity(vel);
+  drive(forward);
+}
+
+/*
+  Stops all motors
+*/
 void stopAll()
 {
   RightMotor.stop();
   LeftMotor.stop();
 }
 
+/*
+  Turns robot left, in an arc (doesn't spin in place)
+*/
 void turnLeft()
 {
   LeftMotor.stop();
   RightMotor.spin(forward);
 }
 
+/*
+  Turns robot right, in an arc (doesn't spin in place)
+*/
 void turnRight()
 {
   RightMotor.stop();
@@ -62,44 +82,48 @@ int main()
 {
   vexcodeInit();
 
+  //Configure Buttons Here - eventually should be converted to using the axes buttons
+  controller::button bFront1 = Controller1.ButtonR2;
+  controller::button bFront2 = Controller1.ButtonL2;
+
+  controller::button bBack1 = Controller1.ButtonR1;
+  controller::button bBack2 = Controller1.ButtonL1;
+
+  controller::button bLeft = Controller1.ButtonY;
+  controller::button bRight = Controller1.ButtonA;
+
+  controller::button masterStop = Controller1.ButtonX;
+
+  //Robot settings before running
+  setTotalVelocity(50);
+
   while(true)
   {
-
     //Forward
-    if(Controller1.ButtonR2.pressing() && Controller1.ButtonL2.pressing()) 
+    if(bFront1.pressing() && bFront2.pressing()) drive(true);
+    else
     {
-      drive(true);
-    } else {
-      Controller1.ButtonR2.released(stopAll);
-      Controller1.ButtonL2.released(stopAll);
+      bFront1.released(stopAll);
+      bFront2.released(stopAll);
     }
 
     //Reverse
-    if(Controller1.ButtonR1.pressing() && Controller1.ButtonL1.pressing()) 
+    if(bBack1.pressing() && bBack2.pressing()) drive(false);
+    else
     {
-      drive(false);
-    } else { Controller1.ButtonR1.released(stopAll);
-      Controller1.ButtonL1.released(stopAll);
-    }    
+      bBack1.released(stopAll);
+      bBack2.released(stopAll);
+    }
 
     //Right
-    if(Controller1.ButtonA.pressing()) 
-    {
-      turnRight();
-    } else { 
-      Controller1.ButtonA.released(stopAll);
-    }
+    if(bRight.pressing()) turnRight();
+    else bRight.released(stopAll);
 
     //Left
-    if(Controller1.ButtonY.pressing()) 
-    {
-      turnLeft();
-    } else { 
-      Controller1.ButtonY.released(stopAll);
-    }
+    if(bLeft.pressing()) turnLeft();
+    else bLeft.released(stopAll);
 
-
-    // ALL STOP
-    if (Controller1.ButtonX.pressing()) stopAll();
+    // Master Stop Button
+    if(masterStop.pressing()) stopAll();
   }
 }
