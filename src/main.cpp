@@ -20,7 +20,6 @@
 
 using namespace vex;
 
-
 /*
   Sets motor velocity to a certain percent
 */
@@ -34,11 +33,11 @@ void setTotalVelocity(int perc)
   Drives robot forward or backward
   Overloaded method sets a custom velocity before starting the motors
 */
-void drive(bool forward)
+void drive(bool directionForward)
 {
   directionType dir;
 
-  if(forward) dir = vex::forward;
+  if(directionForward) dir = forward;
   else dir = reverse;
 
   RightMotor.spin(dir);
@@ -78,6 +77,23 @@ void turnRight()
   LeftMotor.spin(forward);
 }
 
+/*
+  Spins robot to the left
+*/
+void spinLeft() {
+  LeftMotor.spin(reverse);
+  RightMotor.spin(forward);
+}
+
+/*
+  Spins robot to the right
+*/
+void spinRight() {
+  RightMotor.spin(reverse);
+  LeftMotor.spin(forward);
+}
+
+
 int main()
 {
   vexcodeInit();
@@ -91,6 +107,9 @@ int main()
 
   controller::button bLeft = Controller1.ButtonY;
   controller::button bRight = Controller1.ButtonA;
+
+  controller::button bLeftSpin = Controller1.ButtonLeft;
+  controller::button bRightSpin = Controller1.ButtonRight;
 
   controller::button masterStop = Controller1.ButtonX;
 
@@ -122,6 +141,14 @@ int main()
     //Left
     if(bLeft.pressing()) turnLeft();
     else bLeft.released(stopAll);
+
+    //Right Spin
+    if (bRightSpin.pressing()) spinRight();
+    else bRightSpin.released(stopAll);
+
+    //Right Spin
+    if (bLeftSpin.pressing()) spinLeft();
+    else bLeftSpin.released(stopAll);
 
     // Master Stop Button
     if(masterStop.pressing()) stopAll();
