@@ -31,23 +31,17 @@ void setTotalVelocity(int perc)
 
 /*
   Drives robot forward or backward
-  Overloaded method sets a custom velocity before starting the motors
 */
-void drive(bool directionForward)
+void drive(bool directionForward, int vel = 0)
 {
   directionType dir;
+  if(vel != 0) setTotalVelocity(vel);
 
   if(directionForward) dir = forward;
   else dir = reverse;
 
   RightMotor.spin(dir);
   LeftMotor.spin(dir);
-}
-
-void drive(bool forward, int vel)
-{
-  setTotalVelocity(vel);
-  drive(forward);
 }
 
 /*
@@ -59,96 +53,94 @@ void stopAll()
   LeftMotor.stop();
 }
 
-/*
-  Turns robot left, in an arc (doesn't spin in place)
-*/
+/* Deprecated
+  //Turns robot left, in an arc (doesn't spin in place)
 void turnLeft()
 {
   LeftMotor.stop();
   RightMotor.spin(forward);
 }
 
-/*
-  Turns robot right, in an arc (doesn't spin in place)
-*/
+  //Turns robot right, in an arc (doesn't spin in place)
 void turnRight()
 {
   RightMotor.stop();
   LeftMotor.spin(forward);
 }
+*/
 
 /*
-  Spins robot to the left
+  Spins robot to the left - Overloaded method sets velocity as well
 */
-void spinLeft() {
+void spinLeft() 
+{
   LeftMotor.spin(reverse);
   RightMotor.spin(forward);
 }
 
+void spinLeft(int vel)
+{
+  setTotalVelocity(vel);
+  spinLeft();
+}
+
 /*
-  Spins robot to the right
+  Spins robot to the right - Overloaded method sets velocity as well
 */
-void spinRight() {
+void spinRight() 
+{
   RightMotor.spin(reverse);
   LeftMotor.spin(forward);
 }
 
+void spinRight(int vel)
+{
+  setTotalVelocity(vel);
+  spinRight();
+}
+
+bool isBetween(int num, int min, int max)
+{
+  return max > min ? num >= min && num <= max : num <= max && num >= max;
+}
 
 int main()
 {
   vexcodeInit();
 
-  //Configure Buttons Here - eventually should be converted to using the axes buttons
-  controller::button bFront1 = Controller1.ButtonR2;
-  controller::button bFront2 = Controller1.ButtonL2;
+  //Configure Buttons and Axes Here
 
-  controller::button bBack1 = Controller1.ButtonR1;
-  controller::button bBack2 = Controller1.ButtonL1;
-
-  controller::button bLeft = Controller1.ButtonY;
-  controller::button bRight = Controller1.ButtonA;
-
-  controller::button bLeftSpin = Controller1.ButtonLeft;
-  controller::button bRightSpin = Controller1.ButtonRight;
+  controller::axis bAxisFB = Controller1.Axis2;
+  controller::axis bAxisLR = Controller1.Axis4;
 
   controller::button masterStop = Controller1.ButtonX;
 
-  //Robot settings before running
-  setTotalVelocity(50);
-
   while(true)
   {
-    //Forward
-    if(bFront1.pressing() && bFront2.pressing()) drive(true);
-    else
+    int fbPos = bAxisFB.position();
+    int lrPos = bAxisLR.position();
+
+    //Forwards and Backwards
+    if(isBetween(fbPos, 1, 100))
     {
-      bFront1.released(stopAll);
-      bFront2.released(stopAll);
+      drive(true, fbPos);
     }
-
-    //Reverse
-    if(bBack1.pressing() && bBack2.pressing()) drive(false);
-    else
+    else if(isBetween(fbPos, -1, -100))
     {
-      bBack1.released(stopAll);
-      bBack2.released(stopAll);
+      drive(false, fbPos * -1);
     }
+    else if(fbPos == 0) stopAll();
 
-    //Right
-    if(bRight.pressing()) turnRight();
-    else bRight.released(stopAll);
-
-    //Left
-    if(bLeft.pressing()) turnLeft();
-    else bLeft.released(stopAll);
-
-    //Right Spin
-    if (bRightSpin.pressing()) spinRight();
-    else bRightSpin.released(stopAll);
-
-    //Right Spin
-    if (bLeftSpin.pressing()) spinLeft();
-    else bLeftSpin.released(stopAll);
+    //Left and Right - CHECK TO SEE WHAT 100 ACTUALLY MEANS
+    if(isBetween(lrPos, 1, 100))
+    {
+      spinLeft(lrPos);
+    }
+    else if(isBetween(lrPos, -1, -100))
+    {
+      spinRight(lrPos * -1);
+    }
+    else if(lrPos == 0) stopAll();
 
     // Master Stop Button
     if(masterStop.pressing()) stopAll();
