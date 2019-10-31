@@ -21,12 +21,25 @@
 using namespace vex;
 
 /*
+  Stops all motors
+*/
+void stopAll()
+{
+  RightMotor.stop();
+  LeftMotor.stop();
+}
+
+/*
   Sets motor velocity to a certain percent
 */
 void setTotalVelocity(int perc)
 {
-  RightMotor.setVelocity(perc, percent);
-  LeftMotor.setVelocity(perc, percent);
+  if(perc <= 0) stopAll();
+  else 
+  {
+    RightMotor.setVelocity(perc, percent);
+    LeftMotor.setVelocity(perc, percent);
+  }
 }
 
 /*
@@ -45,32 +58,7 @@ void drive(bool directionForward, int vel = 0)
 }
 
 /*
-  Stops all motors
-*/
-void stopAll()
-{
-  RightMotor.stop();
-  LeftMotor.stop();
-}
-
-/* Deprecated
-  //Turns robot left, in an arc (doesn't spin in place)
-void turnLeft()
-{
-  LeftMotor.stop();
-  RightMotor.spin(forward);
-}
-
-  //Turns robot right, in an arc (doesn't spin in place)
-void turnRight()
-{
-  RightMotor.stop();
-  LeftMotor.spin(forward);
-}
-*/
-
-/*
-  Spins robot to the left - Overloaded method sets velocity as well
+  Spins robot to the left
 */
 void spinLeft() 
 {
@@ -78,14 +66,8 @@ void spinLeft()
   RightMotor.spin(forward);
 }
 
-void spinLeft(int vel)
-{
-  setTotalVelocity(vel);
-  spinLeft();
-}
-
 /*
-  Spins robot to the right - Overloaded method sets velocity as well
+  Spins robot to the right
 */
 void spinRight() 
 {
@@ -93,56 +75,57 @@ void spinRight()
   LeftMotor.spin(forward);
 }
 
-void spinRight(int vel)
+/*
+  Gets the current velocity, or the average of the motors' velocities
+*/
+int getCurrentAvgVelocity()
 {
-  setTotalVelocity(vel);
-  spinRight();
+  bool isOn = LeftMotor.isSpinning() && RightMotor.isSpinning();
+  return isOn ? (LeftMotor.velocity(percent) + RightMotor.velocity(percent)) / 2 : 50;
 }
 
-bool isBetween(int num, int min, int max)
-{
-  return max > min ? num >= min && num <= max : num <= max && num >= max;
-}
 
 int main()
 {
   vexcodeInit();
 
-  //Configure Buttons and Axes Here
-
+  //Configure Axes here
   controller::axis bAxisFB = Controller1.Axis2;
   controller::axis bAxisLR = Controller1.Axis4;
 
-  controller::button masterStop = Controller1.ButtonX;
+  controller::button incrVel = Controller1.ButtonUp;
+  controller::button decrVel = Controller1.ButtonDown;
+  controller::button resetVel = Controller1.ButtonA;
+
+  controller::button maxVel = Controller1.ButtonX;
+  controller::button minVel = Controller1.ButtonB; //Used to be called Master Stop, same functionality
+
+  setTotalVelocity(50);
+  int fbPos, lrPos;
 
   while(true)
   {
-    int fbPos = bAxisFB.position();
-    int lrPos = bAxisLR.position();
+    //Velocity Modifiers
+    if(incrVel.pressing()) setTotalVelocity(getCurrentAvgVelocity() + 1);
+    if(decrVel.pressing()) setTotalVelocity(getCurrentAvgVelocity() - 1);
+    if(resetVel.pressing()) setTotalVelocity(50);
 
-    //Forwards and Backwards
-    if(isBetween(fbPos, 1, 100))
-    {
-      drive(true, fbPos);
-    }
-    else if(isBetween(fbPos, -1, -100))
-    {
-      drive(false, fbPos * -1);
-    }
-    else if(fbPos == 0) stopAll();
+    if(maxVel.pressing()) setTotalVelocity(100);
+    if(minVel.pressing()) stopAll();
 
-    //Left and Right - CHECK TO SEE WHAT 100 ACTUALLY MEANS
-    if(isBetween(lrPos, 1, 100))
-    {
-      spinLeft(lrPos);
-    }
-    else if(isBetween(lrPos, -1, -100))
-    {
-      spinRight(lrPos * -1);
-    }
-    else if(lrPos == 0) stopAll();
+    //Update the axes position values
+    fbPos = bAxisFB.position();
+    lrPos = bAxisLR.position();
 
-    // Master Stop Button
-    if(masterStop.pressing()) stopAll();
+    //Turn off motors if neither axis is in use
+    if(fbPos == 0 && lrPos == 0) stopAll();
+
+    //Forwards and Backwards (Axis 2)
+    if(fbPos > 0) drive(true);
+    else if(fbPos < 0) drive(false);
+
+    //Left and Right (Axis 4)
+    if(lrPos > 0) spinRight();
+    else if(lrPos < 0) spinLeft();
   }
 }
