@@ -21,36 +21,6 @@
 using namespace vex;
 
 /*
-  Sets motor velocity to a certain percent
-*/
-void setTotalVelocity(int perc)
-{
-  RightMotor.setVelocity(perc, percent);
-  LeftMotor.setVelocity(perc, percent);
-}
-
-/*
-  Drives robot forward or backward
-  Overloaded method sets a custom velocity before starting the motors
-*/
-void drive(bool directionForward)
-{
-  directionType dir;
-
-  if(directionForward) dir = forward;
-  else dir = reverse;
-
-  RightMotor.spin(dir);
-  LeftMotor.spin(dir);
-}
-
-void drive(bool forward, int vel)
-{
-  setTotalVelocity(vel);
-  drive(forward);
-}
-
-/*
   Stops all motors
 */
 void stopAll()
@@ -60,27 +30,38 @@ void stopAll()
 }
 
 /*
-  Turns robot left, in an arc (doesn't spin in place)
+  Sets motor velocity to a certain percent
 */
-void turnLeft()
+void setTotalVelocity(int perc)
 {
-  LeftMotor.stop();
-  RightMotor.spin(forward);
+  if(perc <= 0) stopAll();
+  else 
+  {
+    RightMotor.setVelocity(perc, percent);
+    LeftMotor.setVelocity(perc, percent);
+  }
 }
 
 /*
-  Turns robot right, in an arc (doesn't spin in place)
+  Drives robot forward or backward
 */
-void turnRight()
+void drive(bool directionForward, int vel = 0)
 {
-  RightMotor.stop();
-  LeftMotor.spin(forward);
+  directionType dir;
+  if(vel != 0) setTotalVelocity(vel);
+
+  if(directionForward) dir = forward;
+  else dir = reverse;
+
+  RightMotor.spin(dir);
+  LeftMotor.spin(dir);
 }
 
 /*
   Spins robot to the left
 */
-void spinLeft() {
+void spinLeft() 
+{
   LeftMotor.spin(reverse);
   RightMotor.spin(forward);
 }
@@ -88,9 +69,19 @@ void spinLeft() {
 /*
   Spins robot to the right
 */
-void spinRight() {
+void spinRight() 
+{
   RightMotor.spin(reverse);
   LeftMotor.spin(forward);
+}
+
+/*
+  Gets the current velocity, or the average of the motors' velocities
+*/
+int getCurrentAvgVelocity()
+{
+  bool isOn = LeftMotor.isSpinning() && RightMotor.isSpinning();
+  return isOn ? (LeftMotor.velocity(percent) + RightMotor.velocity(percent)) / 2 : 50;
 }
 
 
@@ -98,59 +89,43 @@ int main()
 {
   vexcodeInit();
 
-  //Configure Buttons Here - eventually should be converted to using the axes buttons
-  controller::button bFront1 = Controller1.ButtonR2;
-  controller::button bFront2 = Controller1.ButtonL2;
+  //Configure Axes here
+  controller::axis bAxisFB = Controller1.Axis2;
+  controller::axis bAxisLR = Controller1.Axis4;
 
-  controller::button bBack1 = Controller1.ButtonR1;
-  controller::button bBack2 = Controller1.ButtonL1;
+  controller::button incrVel = Controller1.ButtonUp;
+  controller::button decrVel = Controller1.ButtonDown;
+  controller::button resetVel = Controller1.ButtonA;
 
-  controller::button bLeft = Controller1.ButtonY;
-  controller::button bRight = Controller1.ButtonA;
+  controller::button maxVel = Controller1.ButtonX;
+  controller::button minVel = Controller1.ButtonB; //Used to be called Master Stop, same functionality
 
-  controller::button bLeftSpin = Controller1.ButtonLeft;
-  controller::button bRightSpin = Controller1.ButtonRight;
-
-  controller::button masterStop = Controller1.ButtonX;
-
-  //Robot settings before running
   setTotalVelocity(50);
+  int fbPos, lrPos;
 
   while(true)
   {
-    //Forward
-    if(bFront1.pressing() && bFront2.pressing()) drive(true);
-    else
-    {
-      bFront1.released(stopAll);
-      bFront2.released(stopAll);
-    }
+    //Velocity Modifiers
+    if(incrVel.pressing()) setTotalVelocity(getCurrentAvgVelocity() + 1);
+    if(decrVel.pressing()) setTotalVelocity(getCurrentAvgVelocity() - 1);
+    if(resetVel.pressing()) setTotalVelocity(50);
 
-    //Reverse
-    if(bBack1.pressing() && bBack2.pressing()) drive(false);
-    else
-    {
-      bBack1.released(stopAll);
-      bBack2.released(stopAll);
-    }
+    if(maxVel.pressing()) setTotalVelocity(100);
+    if(minVel.pressing()) stopAll();
 
-    //Right
-    if(bRight.pressing()) turnRight();
-    else bRight.released(stopAll);
+    //Update the axes position values
+    fbPos = bAxisFB.position();
+    lrPos = bAxisLR.position();
 
-    //Left
-    if(bLeft.pressing()) turnLeft();
-    else bLeft.released(stopAll);
+    //Turn off motors if neither axis is in use
+    if(fbPos == 0 && lrPos == 0) stopAll();
 
-    //Right Spin
-    if (bRightSpin.pressing()) spinRight();
-    else bRightSpin.released(stopAll);
+    //Forwards and Backwards (Axis 2)
+    if(fbPos > 0) drive(true);
+    else if(fbPos < 0) drive(false);
 
-    //Right Spin
-    if (bLeftSpin.pressing()) spinLeft();
-    else bLeftSpin.released(stopAll);
-
-    // Master Stop Button
-    if(masterStop.pressing()) stopAll();
+    //Left and Right (Axis 4)
+    if(lrPos > 0) spinRight();
+    else if(lrPos < 0) spinLeft();
   }
 }
