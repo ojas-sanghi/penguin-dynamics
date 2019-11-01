@@ -17,6 +17,7 @@
 
 #include "vex.h"
 #include <iostream>
+#include <string>
 
 using namespace vex;
 
@@ -48,6 +49,7 @@ void setTotalVelocity(int perc)
 void drive(bool directionForward, int vel = 0)
 {
   directionType dir;
+
   if(vel != 0) setTotalVelocity(vel);
 
   if(directionForward) dir = forward;
@@ -80,8 +82,7 @@ void spinRight()
 */
 int getCurrentAvgVelocity()
 {
-  bool isOn = LeftMotor.isSpinning() && RightMotor.isSpinning();
-  return isOn ? (LeftMotor.velocity(percent) + RightMotor.velocity(percent)) / 2 : 50;
+  return LeftMotor.isSpinning() && RightMotor.isSpinning() ? (LeftMotor.velocity(percent) + RightMotor.velocity(percent)) / 2 : 50;
 }
 
 
@@ -100,14 +101,21 @@ int main()
   controller::button maxVel = Controller1.ButtonX;
   controller::button minVel = Controller1.ButtonB; //Used to be called Master Stop, same functionality
 
+  controller::button bEnd = Controller1.ButtonL1;
+
   setTotalVelocity(50);
   int fbPos, lrPos;
+  bool end = false;
 
-  while(true)
+  while(!end)
   {
+    //Stop Robot from running in dire situations
+    if(bEnd.pressing()) end = true;
+
     //Velocity Modifiers
     if(incrVel.pressing()) setTotalVelocity(getCurrentAvgVelocity() + 1);
-    if(decrVel.pressing()) setTotalVelocity(getCurrentAvgVelocity() - 1);
+    else if(decrVel.pressing()) setTotalVelocity(getCurrentAvgVelocity() - 1);
+
     if(resetVel.pressing()) setTotalVelocity(50);
 
     if(maxVel.pressing()) setTotalVelocity(100);
@@ -128,4 +136,5 @@ int main()
     if(lrPos > 0) spinRight();
     else if(lrPos < 0) spinLeft();
   }
+  Brain.Screen.print("Robot has stopped");
 }
