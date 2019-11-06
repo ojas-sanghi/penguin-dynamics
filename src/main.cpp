@@ -17,8 +17,14 @@
 
 #include "vex.h"
 #include <iostream>
+#include <sstream>
 
 using namespace vex;
+using namespace std;
+
+int defaultVelocity = 0;
+
+void printVel();
 
 /*
   Stops all motors
@@ -34,12 +40,14 @@ void stopAll()
 */
 void setTotalVelocity(int perc)
 {
+  printVel();
   if(perc <= 0) stopAll();
   else 
   {
     RightMotor.setVelocity(perc, percent);
     LeftMotor.setVelocity(perc, percent);
   }
+  printVel();
 }
 
 /*
@@ -50,7 +58,7 @@ void drive(bool directionForward, int vel = 0)
   directionType dir;
   if(vel != 0) setTotalVelocity(vel);
 
-  if(directionForward) dir = forward;
+  if(directionForward) dir = vex::forward;
   else dir = reverse;
 
   RightMotor.spin(dir);
@@ -58,21 +66,41 @@ void drive(bool directionForward, int vel = 0)
 }
 
 /*
+  Default velocity
+*/
+int getDefaultVel() {return defaultVelocity;}
+void setDefaultVel(int vel) {defaultVelocity = vel;}
+
+/*
   Spins robot to the left
 */
-void spinLeft() 
+void spinLeft(bool instant = false) 
 {
+  bool isInstant = false;
+  if(instant)
+  {
+    setTotalVelocity(100);
+    isInstant = true;
+  }
   LeftMotor.spin(reverse);
-  RightMotor.spin(forward);
+  RightMotor.spin(vex::forward);
+  if(isInstant) setTotalVelocity(getDefaultVel());
 }
 
 /*
   Spins robot to the right
 */
-void spinRight() 
+void spinRight(bool instant = false) 
 {
+  bool isInstant = false;
+  if(instant)
+  {
+    setTotalVelocity(100);
+    isInstant = true;
+  }
+  LeftMotor.spin(vex::forward);
   RightMotor.spin(reverse);
-  LeftMotor.spin(forward);
+  if(isInstant) setTotalVelocity(getDefaultVel());
 }
 
 /*
@@ -82,6 +110,16 @@ int getCurrentAvgVelocity()
 {
   bool isOn = LeftMotor.isSpinning() && RightMotor.isSpinning();
   return isOn ? (LeftMotor.velocity(percent) + RightMotor.velocity(percent)) / 2 : 50;
+}
+
+void printVel()
+{
+  ostringstream stream1;
+
+  stream1 << "Right Motor Vel: " << RightMotor.velocity(percent) << " . Left Motor Vel: " << LeftMotor.velocity(percent);
+
+  Brain.Screen.print(RightMotor.velocity(percent));
+  Brain.Screen.print(LeftMotor.velocity(percent));
 }
 
 
@@ -100,7 +138,10 @@ int main()
   controller::button maxVel = Controller1.ButtonX;
   controller::button minVel = Controller1.ButtonB; //Used to be called Master Stop, same functionality
 
-  setTotalVelocity(50);
+  controller::button bInstaSpinR = Controller1.ButtonRight;
+  controller::button bInstaSpinL = Controller1.ButtonLeft;
+
+  setDefaultVel(75);
   int fbPos, lrPos;
 
   while(true)
@@ -113,12 +154,17 @@ int main()
     if(maxVel.pressing()) setTotalVelocity(100);
     if(minVel.pressing()) stopAll();
 
+    //Instant Spin
+    if(bInstaSpinR.pressing() || bInstaSpinL.pressing())
+    {
+      if(bInstaSpinR.pressing()) spinRight(true);
+      else spinLeft(true);
+    }
+    
+    //Axis Stuff
     //Update the axes position values
     fbPos = bAxisFB.position();
     lrPos = bAxisLR.position();
-
-    //Turn off motors if neither axis is in use
-    if(fbPos == 0 && lrPos == 0) stopAll();
 
     //Forwards and Backwards (Axis 2)
     if(fbPos > 0) drive(true);
