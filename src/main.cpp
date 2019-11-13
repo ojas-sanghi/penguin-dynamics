@@ -10,9 +10,9 @@
 // ---- START VEXCODE CONFIGURED DEVICES ----
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
-// LeftMotor            motor         10
-// RightMotor           motor         1
-// Controller1          controller
+// LeftMotor            motor         10              
+// RightMotor           motor         1               
+// Controller1          controller                    
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -165,6 +165,9 @@ int main()
     //Update the axes position values
     fbPos = bAxisFB.position();
     lrPos = bAxisLR.position();
+
+    //Stop motors if neither axis in use
+    if(fbPos == 0 && lrPos == 0) stopAll();
 
     //Forwards and Backwards (Axis 2)
     if(fbPos > 0) drive(true);
