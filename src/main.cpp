@@ -24,8 +24,6 @@ using namespace std;
 
 int defaultVelocity = 0;
 
-void printVel();
-
 /*
   Stops all motors
 */
@@ -40,51 +38,62 @@ void stopAll()
 */
 void setTotalVelocity(int perc)
 {
-  printVel();
-  if(perc <= 0) stopAll();
-  else 
-  {
-    RightMotor.setVelocity(perc, percent);
-    LeftMotor.setVelocity(perc, percent);
+  if (perc <= 0) {
+    stopAll();  
   }
-  printVel();
+  RightMotor.setVelocity(perc, percent);
+  LeftMotor.setVelocity(perc, percent);
 }
 
 /*
   Drives robot forward or backward
 */
-void drive(bool directionForward, int vel = 0)
+void drive(int vel = 0)
 {
   directionType dir;
-  if(vel != 0) setTotalVelocity(vel);
 
-  if(directionForward) dir = vex::forward;
-  else dir = reverse;
+  if (vel != 0) {
+    setTotalVelocity(vel);
+
+    if (vel > 0) {
+      dir = vex::forward;
+    } else {
+      dir = reverse;
+    }
+
+  } else {
+    setTotalVelocity(defaultVelocity);
+    dir = vex::forward;
+  }
 
   RightMotor.spin(dir);
   LeftMotor.spin(dir);
 }
 
 /*
-  Default velocity
+  Default velocity getters and setters
 */
-int getDefaultVel() {return defaultVelocity;}
-void setDefaultVel(int vel) {defaultVelocity = vel;}
+int getDefaultVel() {
+  return defaultVelocity;
+}
+void setDefaultVel(int vel) {
+  defaultVelocity = vel;
+}
 
 /*
   Spins robot to the left
 */
 void spinLeft(bool instant = false) 
 {
-  bool isInstant = false;
-  if(instant)
+  if (instant)
   {
     setTotalVelocity(100);
-    isInstant = true;
   }
   LeftMotor.spin(reverse);
   RightMotor.spin(vex::forward);
-  if(isInstant) setTotalVelocity(getDefaultVel());
+  if (instant) {
+    setTotalVelocity(getDefaultVel());
+  } 
 }
 
 /*
@@ -92,24 +101,30 @@ void spinLeft(bool instant = false)
 */
 void spinRight(bool instant = false) 
 {
-  bool isInstant = false;
   if(instant)
   {
     setTotalVelocity(100);
-    isInstant = true;
   }
   LeftMotor.spin(vex::forward);
   RightMotor.spin(reverse);
-  if(isInstant) setTotalVelocity(getDefaultVel());
+  if(instant) {
+    setTotalVelocity(getDefaultVel());
+  }
 }
 
 /*
   Gets the current velocity, or the average of the motors' velocities
 */
-int getCurrentAvgVelocity()
+int getCurrentVelocity()
 {
   bool isOn = LeftMotor.isSpinning() && RightMotor.isSpinning();
-  return isOn ? (LeftMotor.velocity(percent) + RightMotor.velocity(percent)) / 2 : 50;
+  if (isOn) {
+    double totalVel = LeftMotor.velocity(percent) + RightMotor.velocity(percent);
+    double avgVel = totalVel / 2;
+    return avgVel;
+  } else {
+    return 0;
+  }
 }
 
 void printVel()
@@ -128,53 +143,53 @@ int main()
   vexcodeInit();
 
   //Configure Axes here
-  controller::axis bAxisFB = Controller1.Axis2;
-  controller::axis bAxisLR = Controller1.Axis4;
+  controller::axis axisForwardBackward = Controller1.Axis2;
+  controller::axis axisLeftRight = Controller1.Axis4;
 
   controller::button incrVel = Controller1.ButtonUp;
   controller::button decrVel = Controller1.ButtonDown;
   controller::button resetVel = Controller1.ButtonA;
 
   controller::button maxVel = Controller1.ButtonX;
-  controller::button minVel = Controller1.ButtonB; //Used to be called Master Stop, same functionality
+  controller::button zeroVel = Controller1.ButtonB; //Used to be called Master Stop, same functionality
 
-  controller::button bInstaSpinR = Controller1.ButtonRight;
-  controller::button bInstaSpinL = Controller1.ButtonLeft;
+  controller::button instaSpinRight = Controller1.ButtonRight;
+  controller::button instaSpinLeft = Controller1.ButtonLeft;
 
   setDefaultVel(75);
-  int fbPos, lrPos;
+  // int fbPos, lrPos;
 
   while(true)
   {
     //Velocity Modifiers
-    if(incrVel.pressing()) setTotalVelocity(getCurrentAvgVelocity() + 1);
-    if(decrVel.pressing()) setTotalVelocity(getCurrentAvgVelocity() - 1);
+    if(incrVel.pressing()) setTotalVelocity(getCurrentVelocity() + 1);
+    if(decrVel.pressing()) setTotalVelocity(getCurrentVelocity() - 1);
     if(resetVel.pressing()) setTotalVelocity(50);
 
     if(maxVel.pressing()) setTotalVelocity(100);
-    if(minVel.pressing()) stopAll();
+    if(zeroVel.pressing()) stopAll();
 
     //Instant Spin
-    if(bInstaSpinR.pressing() || bInstaSpinL.pressing())
-    {
-      if(bInstaSpinR.pressing()) spinRight(true);
-      else spinLeft(true);
+    if (instaSpinRight.pressing()) {
+      spinRight(true);
+    } else if (instaSpinLeft.pressing()) {
+      spinLeft(true);
     }
     
     //Axis Stuff
     //Update the axes position values
-    fbPos = bAxisFB.position();
-    lrPos = bAxisLR.position();
+    int forwardBackwardPos = axisForwardBackward.position();
+    int leftRightPos = axisLeftRight.position();
 
     //Stop motors if neither axis in use
-    if(fbPos == 0 && lrPos == 0) stopAll();
+    if(forwardBackwardPos == 0 && leftRightPos == 0) stopAll();
 
     //Forwards and Backwards (Axis 2)
-    if(fbPos > 0) drive(true);
-    else if(fbPos < 0) drive(false);
+    if (forwardBackwardPos > 0) drive(forwardBackwardPos);
+    else if(forwardBackwardPos < 0) drive(leftRightPos);
 
     //Left and Right (Axis 4)
-    if(lrPos > 0) spinRight();
-    else if(lrPos < 0) spinLeft();
+    if(leftRightPos > 0) spinRight();
+    else if(leftRightPos < 0) spinLeft();
   }
 }
