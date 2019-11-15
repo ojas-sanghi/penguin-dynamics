@@ -22,151 +22,69 @@
 using namespace vex;
 using namespace std;
 
-int defaultVelocity = 0;
+void stopAll(); //Stops all motors
+void setTotalVelocity(int perc); //Sets motors to a given percent
+void drive(int vel = 0); //Drives robot forwards or backwards (velocity is determined by the parameter)
+int getDefaultVel(); //Returns the default velocity
+void spinLeft(bool instant = false); //Spins robot left
+void spinRight(bool instant = false); //Spins robot right
+int getCurrentVelocity(); //Gets the current average velocity of the motors
+void printVel(); //Prints the current velocity to the robot brain
 
-/*
-  Stops all motors
-*/
-void stopAll()
-{
-  RightMotor.stop();
-  LeftMotor.stop();
-}
+void manualControl(); //Run this for driver-based robot controls
+void autonomousControl(); //Run this during the autonomous period (NOT IMPLEMENTED)
 
-/*
-  Sets motor velocity to a certain percent
-*/
-void setTotalVelocity(int perc)
-{
-  if (perc <= 0) {
-    stopAll();  
-  }
-  RightMotor.setVelocity(perc, percent);
-  LeftMotor.setVelocity(perc, percent);
-}
+int defaultVelocity = 75; //Default velocity for the robot
 
-/*
-  Drives robot forward or backward
-*/
-void drive(int vel = 0)
-{
-  directionType dir = vex::forward;
+controller::axis axisForwardBackward = Controller1.Axis2; //Axis used to drive forward and backward
+controller::axis axisLeftRight = Controller1.Axis4; //Axis used to move left and right
 
-  if(vel > 0) dir = vex::forward;
-  else if(vel < 0) dir = vex::reverse;
-  else stopAll();
+controller::button incrVel = Controller1.ButtonUp; //Increases velocity by 1%
+controller::button decrVel = Controller1.ButtonDown; //Decreases velocity by 1%
+controller::button resetVel = Controller1.ButtonA; //Resets the velocity to the default
+controller::button maxVel = Controller1.ButtonX; //Sets velocity to 100%
+controller::button zeroVel = Controller1.ButtonB; //Sets velocity to 0% (stops motors)
 
-  RightMotor.spin(dir);
-  LeftMotor.spin(dir);
-}
-
-/*
-  Default velocity getters and setters
-*/
-int getDefaultVel() {
-  return defaultVelocity;
-}
-void setDefaultVel(int vel) {
-  defaultVelocity = vel;
-}
-
-/*
-  Spins robot to the left
-*/
-void spinLeft(bool instant = false) 
-{
-  if (instant)
-  {
-    setTotalVelocity(100);
-  }
-  LeftMotor.spin(reverse);
-  RightMotor.spin(vex::forward);
-  if (instant) {
-    setTotalVelocity(getDefaultVel());
-  } 
-}
-
-/*
-  Spins robot to the right
-*/
-void spinRight(bool instant = false) 
-{
-  if(instant)
-  {
-    setTotalVelocity(100);
-  }
-  LeftMotor.spin(vex::forward);
-  RightMotor.spin(reverse);
-  if(instant) {
-    setTotalVelocity(getDefaultVel());
-  }
-}
-
-/*
-  Gets the current velocity, or the average of the motors' velocities
-*/
-int getCurrentVelocity()
-{
-  bool isOn = LeftMotor.isSpinning() && RightMotor.isSpinning();
-  if (isOn) {
-    double totalVel = LeftMotor.velocity(percent) + RightMotor.velocity(percent);
-    double avgVel = totalVel / 2;
-    return avgVel;
-  } else {
-    return 0;
-  }
-}
-
-void printVel()
-{
-  ostringstream stream1;
-
-  stream1 << "Right Motor Vel: " << RightMotor.velocity(percent) << " . Left Motor Vel: " << LeftMotor.velocity(percent);
-
-  Brain.Screen.print(RightMotor.velocity(percent));
-  Brain.Screen.print(LeftMotor.velocity(percent));
-}
-
+//WIP
+controller::button instaSpinRight = Controller1.ButtonR2; //Spins Robot to the right at 100% velocity
+controller::button instaSpinLeft = Controller1.ButtonL2; //Spins Robot to the left at 100% velocity
 
 int main()
 {
   vexcodeInit();
+  manualControl();
+}
 
-  //Configure Axes here
-  controller::axis axisForwardBackward = Controller1.Axis2;
-  controller::axis axisLeftRight = Controller1.Axis4;
+void autonomousControl()
+{
+  //NOT IMPLEMENTED
+}
 
-  controller::button incrVel = Controller1.ButtonUp;
-  controller::button decrVel = Controller1.ButtonDown;
-  controller::button resetVel = Controller1.ButtonA;
-
-  controller::button maxVel = Controller1.ButtonX;
-  controller::button zeroVel = Controller1.ButtonB; //Used to be called Master Stop, same functionality
-
-  controller::button instaSpinRight = Controller1.ButtonRight;
-  controller::button instaSpinLeft = Controller1.ButtonLeft;
-
-  setDefaultVel(75);
+void manualControl()
+{
   int forwardBackwardPos, leftRightPos;
-
   while(true)
   {
     //Velocity Modifiers
-    if(incrVel.pressing()) setTotalVelocity(getCurrentVelocity() + 1);
-    if(decrVel.pressing()) setTotalVelocity(getCurrentVelocity() - 1);
-    if(resetVel.pressing()) setTotalVelocity(50);
+    if(incrVel.pressing()) setTotalVelocity(getCurrentVelocity() + 2);
+    if(decrVel.pressing()) setTotalVelocity(getCurrentVelocity() - 2);
+    if(resetVel.pressing()) setTotalVelocity(getDefaultVel());
 
     if(maxVel.pressing()) setTotalVelocity(100);
     if(zeroVel.pressing()) stopAll();
 
     //Instant Spin
-    if (instaSpinRight.pressing()) {
+    if (instaSpinRight.pressing()) 
+    {
       spinRight(true);
-    } else if (instaSpinLeft.pressing()) {
-      spinLeft(true);
+      instaSpinRight.released(stopAll);
     }
-    
-    //Axis Stuff
+    else if (instaSpinLeft.pressing()) 
+    {
+      spinLeft(true);
+      instaSpinLeft.released(stopAll);
+    }
+  
     //Update the axes position values
     forwardBackwardPos = axisForwardBackward.position();
     leftRightPos = axisLeftRight.position();
@@ -181,4 +99,70 @@ int main()
     if(leftRightPos > 0) spinRight();
     else if(leftRightPos < 0) spinLeft();
   }
+}
+
+void drive(int vel)
+{
+  if(vel != 0) 
+  {
+    directionType dir = vel > 0 ? vex::forward : vex::reverse;
+    RightMotor.spin(dir);
+    LeftMotor.spin(dir);
+  }
+  else stopAll();
+}
+
+void spinLeft(bool instant) 
+{
+  if (instant) setTotalVelocity(100);
+  LeftMotor.spin(vex::reverse);
+  RightMotor.spin(vex::forward);
+  if (instant) setTotalVelocity(getDefaultVel());
+}
+
+void spinRight(bool instant) 
+{
+  if (instant) setTotalVelocity(100);
+  LeftMotor.spin(vex::forward);
+  RightMotor.spin(vex::reverse);
+  if (instant) setTotalVelocity(getDefaultVel());
+}
+
+void stopAll()
+{
+  RightMotor.stop();
+  LeftMotor.stop();
+}
+
+void setTotalVelocity(int perc)
+{
+  if (perc <= 0) stopAll();
+  RightMotor.setVelocity(perc, percent);
+  LeftMotor.setVelocity(perc, percent);
+}
+
+int getDefaultVel() 
+{
+  return defaultVelocity;
+}
+
+int getCurrentVelocity()
+{
+  if (LeftMotor.isSpinning() && RightMotor.isSpinning()) 
+  {
+    double totalVel = LeftMotor.velocity(percent) + RightMotor.velocity(percent);
+    double avgVel = totalVel / 2;
+    return avgVel;
+  } 
+  else return 0;
+}
+
+void printVel()
+{
+  ostringstream stream1;
+
+  stream1 << "Right Motor Vel: " << RightMotor.velocity(percent) << " . Left Motor Vel: " << LeftMotor.velocity(percent);
+
+  Brain.Screen.print(RightMotor.velocity(percent));
+  Brain.Screen.print(LeftMotor.velocity(percent));
 }
