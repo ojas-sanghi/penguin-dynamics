@@ -10,8 +10,8 @@
 // ---- START VEXCODE CONFIGURED DEVICES ----
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
-// LeftMotor            motor         10              
-// RightMotor           motor         1               
+// LeftMotor            motor         1               
+// RightMotor           motor         2               
 // Controller1          controller                    
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
@@ -50,21 +50,11 @@ void setTotalVelocity(int perc)
 */
 void drive(int vel = 0)
 {
-  directionType dir;
+  directionType dir = vex::forward;
 
-  if (vel != 0) {
-    setTotalVelocity(vel);
-
-    if (vel > 0) {
-      dir = vex::forward;
-    } else {
-      dir = reverse;
-    }
-
-  } else {
-    setTotalVelocity(defaultVelocity);
-    dir = vex::forward;
-  }
+  if(vel > 0) dir = vex::forward;
+  else if(vel < 0) dir = vex::reverse;
+  else stopAll();
 
   RightMotor.spin(dir);
   LeftMotor.spin(dir);
@@ -157,7 +147,7 @@ int main()
   controller::button instaSpinLeft = Controller1.ButtonLeft;
 
   setDefaultVel(75);
-  // int fbPos, lrPos;
+  int forwardBackwardPos, leftRightPos;
 
   while(true)
   {
@@ -178,15 +168,14 @@ int main()
     
     //Axis Stuff
     //Update the axes position values
-    int forwardBackwardPos = axisForwardBackward.position();
-    int leftRightPos = axisLeftRight.position();
+    forwardBackwardPos = axisForwardBackward.position();
+    leftRightPos = axisLeftRight.position();
 
     //Stop motors if neither axis in use
     if(forwardBackwardPos == 0 && leftRightPos == 0) stopAll();
 
     //Forwards and Backwards (Axis 2)
-    if (forwardBackwardPos > 0) drive(forwardBackwardPos);
-    else if(forwardBackwardPos < 0) drive(leftRightPos);
+    if(forwardBackwardPos != 0) drive(forwardBackwardPos);
 
     //Left and Right (Axis 4)
     if(leftRightPos > 0) spinRight();
