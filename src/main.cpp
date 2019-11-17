@@ -22,18 +22,6 @@
 using namespace vex;
 using namespace std;
 
-void stopAll(); //Stops all motors
-void setTotalVelocity(int perc); //Sets motors to a given percent
-void drive(int vel = 0); //Drives robot forwards or backwards (velocity is determined by the parameter)
-int getDefaultVel(); //Returns the default velocity
-void spinLeft(bool instant = false); //Spins robot left
-void spinRight(bool instant = false); //Spins robot right
-int getCurrentVelocity(); //Gets the current average velocity of the motors
-void printVel(); //Prints the current velocity to the robot brain
-
-void manualControl(); //Run this for driver-based robot controls
-void autonomousControl(); //Run this during the autonomous period (NOT IMPLEMENTED)
-
 int defaultVelocity = 75; //Default velocity for the robot
 
 controller::axis axisForwardBackward = Controller1.Axis2; //Axis used to drive forward and backward
@@ -49,25 +37,123 @@ controller::button zeroVel = Controller1.ButtonB; //Sets velocity to 0% (stops m
 controller::button instaSpinRight = Controller1.ButtonR2; //Spins Robot to the right at 100% velocity
 controller::button instaSpinLeft = Controller1.ButtonL2; //Spins Robot to the left at 100% velocity
 
-int main()
+/*
+  Stops all motors
+*/
+void stopAll()
 {
-  vexcodeInit();
-  manualControl();
+  RightMotor.stop();
+  LeftMotor.stop();
 }
 
+/*
+  Sets total velocity to a certain percent
+*/
+void setTotalVelocity(int perc)
+{
+  if (perc <= 0) stopAll();
+  RightMotor.setVelocity(perc, percent);
+  LeftMotor.setVelocity(perc, percent);
+}
+
+/*
+  Returns default velocity
+*/
+int getDefaultVel() 
+{
+  return defaultVelocity;
+}
+
+/*
+  Gets the current velocity of both motors
+*/
+int getCurrentVelocity()
+{
+  if (LeftMotor.isSpinning() && RightMotor.isSpinning()) 
+  {
+    double totalVel = LeftMotor.velocity(percent) + RightMotor.velocity(percent);
+    double avgVel = totalVel / 2;
+    return avgVel;
+  } 
+  else return 0;
+}
+
+void printVel()
+{
+  ostringstream stream1;
+
+  stream1 << "Right Motor Vel: " << RightMotor.velocity(percent) << " . Left Motor Vel: " << LeftMotor.velocity(percent);
+
+  Brain.Screen.print(RightMotor.velocity(percent));
+  Brain.Screen.print(LeftMotor.velocity(percent));
+}
+
+/*
+  Drives forward or backward
+  @param vel Robot velocity. If vel > 0, robot will drive forward, if vel < 0 backward
+*/
+void drive(int vel)
+{
+  if(vel != 0) 
+  {
+    directionType dir = vel > 0 ? vex::forward : vex::reverse;
+    RightMotor.spin(dir);
+    LeftMotor.spin(dir);
+  }
+  else stopAll();
+}
+
+/*
+  Spins the robot to the left
+  @param instant If set to true, robot will set velocity to 100
+  @param arc If set to true, robot will halve the left motor's velocity to make for a smoother turn
+*/
+void spinLeft(bool instant = false, bool arc = false) 
+{
+  if(instant) setTotalVelocity(100);
+  else if(arc) LeftMotor.setVelocity(getCurrentVelocity() / 2, percent);
+
+  LeftMotor.spin(vex::reverse);
+  RightMotor.spin(vex::forward);
+
+  if(instant || arc) setTotalVelocity(getDefaultVel());
+}
+
+/*
+  Spins the robot to the right
+  @param instant If set to true, robot will set velocity to 100
+  @param arc If set to true, robot will halve the right motor's velocity to make for a smoother turn
+*/
+void spinRight(bool instant = false, bool arc = false) 
+{
+  if(instant) setTotalVelocity(100);
+  else if(arc) LeftMotor.setVelocity(getCurrentVelocity() / 2, percent);
+
+  LeftMotor.spin(vex::forward);
+  RightMotor.spin(vex::reverse);
+
+  if(instant || arc) setTotalVelocity(getDefaultVel());
+}
+
+/*
+  Method to be run during autonomous period
+*/
 void autonomousControl()
 {
   //NOT IMPLEMENTED
 }
 
+/*
+  Method to be run when a driver is controlling the bot
+*/
 void manualControl()
 {
   int forwardBackwardPos, leftRightPos;
   while(true)
   {
     //Velocity Modifiers
-    if(incrVel.pressing()) setTotalVelocity(getCurrentVelocity() + 2);
-    if(decrVel.pressing()) setTotalVelocity(getCurrentVelocity() - 2);
+    if(incrVel.pressing()) setTotalVelocity(getCurrentVelocity() + 5);
+    if(decrVel.pressing()) setTotalVelocity(getCurrentVelocity() - 5);
     if(resetVel.pressing()) setTotalVelocity(getDefaultVel());
 
     if(maxVel.pressing()) setTotalVelocity(100);
@@ -96,73 +182,15 @@ void manualControl()
     if(forwardBackwardPos != 0) drive(forwardBackwardPos);
 
     //Left and Right (Axis 4)
-    if(leftRightPos > 0) spinRight();
+    if(leftRightPos > 0 && forwardBackwardPos != 0) spinRight(false, true);
+    else if(leftRightPos > 0) spinRight();
+    else if(leftRightPos < 0 && forwardBackwardPos != 0) spinLeft(false, true);
     else if(leftRightPos < 0) spinLeft();
   }
 }
 
-void drive(int vel)
+int main()
 {
-  if(vel != 0) 
-  {
-    directionType dir = vel > 0 ? vex::forward : vex::reverse;
-    RightMotor.spin(dir);
-    LeftMotor.spin(dir);
-  }
-  else stopAll();
-}
-
-void spinLeft(bool instant) 
-{
-  if (instant) setTotalVelocity(100);
-  LeftMotor.spin(vex::reverse);
-  RightMotor.spin(vex::forward);
-  if (instant) setTotalVelocity(getDefaultVel());
-}
-
-void spinRight(bool instant) 
-{
-  if (instant) setTotalVelocity(100);
-  LeftMotor.spin(vex::forward);
-  RightMotor.spin(vex::reverse);
-  if (instant) setTotalVelocity(getDefaultVel());
-}
-
-void stopAll()
-{
-  RightMotor.stop();
-  LeftMotor.stop();
-}
-
-void setTotalVelocity(int perc)
-{
-  if (perc <= 0) stopAll();
-  RightMotor.setVelocity(perc, percent);
-  LeftMotor.setVelocity(perc, percent);
-}
-
-int getDefaultVel() 
-{
-  return defaultVelocity;
-}
-
-int getCurrentVelocity()
-{
-  if (LeftMotor.isSpinning() && RightMotor.isSpinning()) 
-  {
-    double totalVel = LeftMotor.velocity(percent) + RightMotor.velocity(percent);
-    double avgVel = totalVel / 2;
-    return avgVel;
-  } 
-  else return 0;
-}
-
-void printVel()
-{
-  ostringstream stream1;
-
-  stream1 << "Right Motor Vel: " << RightMotor.velocity(percent) << " . Left Motor Vel: " << LeftMotor.velocity(percent);
-
-  Brain.Screen.print(RightMotor.velocity(percent));
-  Brain.Screen.print(LeftMotor.velocity(percent));
+  vexcodeInit();
+  manualControl();
 }
