@@ -24,20 +24,20 @@ using namespace std;
 
 int defaultVelocity = 75; //Default velocity for the robot
 
-controller::axis axisForwardBackward = Controller1.Axis2; //Axis used to drive forward and backward
-controller::axis axisLeftRight = Controller1.Axis4; //Axis used to move left and right
+controller::axis axisForwardBackward() {return Controller1.Axis2;} //Axis used to drive forward and backward
+controller::axis axisLeftRight() {return Controller1.Axis4;} //Axis used to move left and right
 
-controller::button incrVel = Controller1.ButtonUp; //Increases velocity by 5%
-controller::button decrVel = Controller1.ButtonDown; //Decreases velocity by 5%
-controller::button resetVel = Controller1.ButtonA; //Resets the velocity to the default
-controller::button maxVel = Controller1.ButtonX; //Sets velocity to 100%
-controller::button zeroVel = Controller1.ButtonB; //Sets velocity to 0% (stops motors)
+controller::button incrVel() {return Controller1.ButtonUp;} //Increases velocity by 5%
+controller::button decrVel() {return Controller1.ButtonDown;} //Decreases velocity by 5%
+controller::button resetVel() {return Controller1.ButtonA;} //Resets the velocity to the default
+controller::button maxVel() {return Controller1.ButtonX;} //Sets velocity to 100%
+controller::button zeroVel() {return Controller1.ButtonB;} //Sets velocity to 0% (stops motors)
 
 //WIP
-controller::button instaSpinRight = Controller1.ButtonR2; //Spins Robot to the right at 100% velocity
-controller::button instaSpinLeft = Controller1.ButtonL2; //Spins Robot to the left at 100% velocity
+controller::button instaSpinRight() {return Controller1.ButtonR2;} //Spins Robot to the right at 100% velocity
+controller::button instaSpinLeft() {return Controller1.ButtonL2;} //Spins Robot to the left at 100% velocity
 
-controller::button stopProgram = Controller1.ButtonY; //Breaks out of the while loop and stops the program
+controller::button stopProgram() {return Controller1.ButtonY;} //Breaks out of the while loop and stops the program
 
 /*
   Stops all motors
@@ -53,7 +53,7 @@ void stopAll()
 */
 void setTotalVelocity(int perc)
 {
-  if (perc <= 0) stopAll();
+  // if (perc <= 0) stopAll();
   RightMotor.setVelocity(perc, percent);
   LeftMotor.setVelocity(perc, percent);
 }
@@ -96,11 +96,16 @@ void printVel()
 */
 void drive(int vel)
 {
+  directionType dir = vel > 0 ? vex::forward : vex::reverse;
   if(vel != 0) 
   {
-    directionType dir = vel > 0 ? vex::forward : vex::reverse;
+    setTotalVelocity(vel < 0 ? vel * -1 : vel);
+    Brain.Screen.print(RightMotor.direction());
+    Brain.Screen.print(LeftMotor.direction());
     RightMotor.spin(dir);
     LeftMotor.spin(dir);
+    Brain.Screen.print(RightMotor.direction());
+    Brain.Screen.print(LeftMotor.direction());
   }
   else stopAll();
 }
@@ -108,39 +113,29 @@ void drive(int vel)
 /*
   Spins the robot to the left
   @param instant If set to true, robot will set velocity to 100
-  @param arc If set to true, robot will halve the left motor's velocity to make for a smoother turn
 */
-void spinLeft(bool instant = false, bool arc = false) 
+void spinLeft(int vel = 100) 
 {
-  if(instant) setTotalVelocity(100);
-  else if(arc) 
-  {
-    LeftMotor.setVelocity(getCurrentVelocity() / 2, percent);
-  }
+  setTotalVelocity(100); 
 
   LeftMotor.spin(vex::reverse);
   RightMotor.spin(vex::forward);
 
-  if(instant || arc) setTotalVelocity(getDefaultVel());
+  if(vel == 100) setTotalVelocity(getDefaultVel());
 }
 
 /*
   Spins the robot to the right
   @param instant If set to true, robot will set velocity to 100
-  @param arc If set to true, robot will halve the right motor's velocity to make for a smoother turn
 */
-void spinRight(bool instant = false, bool arc = false) 
+void spinRight(int vel = 100) 
 {
-  if(instant) setTotalVelocity(100);
-  else if(arc) 
-  {
-    LeftMotor.setVelocity(getCurrentVelocity() / 2, percent);
-  }
+  setTotalVelocity(100);
 
   LeftMotor.spin(vex::forward);
   RightMotor.spin(vex::reverse);
 
-  if(instant || arc) setTotalVelocity(getDefaultVel());
+  if(vel == 100) setTotalVelocity(getDefaultVel());
 }
 
 /*
@@ -160,60 +155,50 @@ void manualControl()
   while(true)
   {
     //Velocity Modifiers
-    if(incrVel.pressing()) setTotalVelocity(getCurrentVelocity() + 5);
-    if(decrVel.pressing()) setTotalVelocity(getCurrentVelocity() - 5);
-    if(resetVel.pressing()) setTotalVelocity(getDefaultVel());
+    if(incrVel().pressing()) setTotalVelocity(getCurrentVelocity() + 5);
+    if(decrVel().pressing()) setTotalVelocity(getCurrentVelocity() - 5);
+    if(resetVel().pressing()) setTotalVelocity(getDefaultVel());
 
-    if(maxVel.pressing()) setTotalVelocity(100);
-    if(zeroVel.pressing()) stopAll();
+    if(maxVel().pressing()) setTotalVelocity(100);
+    if(zeroVel().pressing()) stopAll();
 
-    //Instant Spin
-    if (instaSpinRight.pressing()) 
+    /*Instant Spin
+    if (instaSpinRight().pressing()) 
     {
       spinRight(true);
-      instaSpinRight.released(stopAll);
+      instaSpinRight().released(stopAll);
     }
-    else if (instaSpinLeft.pressing()) 
+    else if (instaSpinLeft().pressing()) 
     {
       spinLeft(true);
-      instaSpinLeft.released(stopAll);
-    }
+      instaSpinLeft().released(stopAll);
+    }*/
   
     //Update the axes position values
-    forwardBackwardPos = axisForwardBackward.position();
-    leftRightPos = axisLeftRight.position();
+    forwardBackwardPos = axisForwardBackward().position();
+    leftRightPos = axisLeftRight().position();
 
     //Stop motors if neither axis in use
     if(forwardBackwardPos == 0 && leftRightPos == 0) stopAll();
 
     //Forwards and Backwards (Axis 2)
-    if(forwardBackwardPos != 0) drive(forwardBackwardPos);
+    if(forwardBackwardPos != 0) drive(forwardBackwardPos < 0 ? forwardBackwardPos * -1 : forwardBackwardPos);
 
     // Left and Right (Axis 4) - Left is axis pos < 0, right is axis pos > 0
 
-    // Axis Position is positive and forwards/backwards axis is not idle (!= 0) -> Arc Right
-    if(leftRightPos > 0 && forwardBackwardPos != 0) 
-    {
-      spinRight(false, true);
-    }
     // Axis Position is positive and forwards/backwards axis is idle (== 0) -> Spin Right
-    else if(leftRightPos > 0) 
+    if(leftRightPos > 0) 
     {
-      spinRight();
-    }
-    // Axis Position is negative and forwards/backwards axis is not idle (!= 0) -> Arc Left
-    else if(leftRightPos < 0 && forwardBackwardPos != 0) 
-    {
-      spinLeft(false, true);
+      spinRight(leftRightPos);
     }
     // Axis Position is negative and forwards/backwards axis is idle (== 0) -> Spin Left
     else if(leftRightPos < 0) 
     {
-      spinLeft();
+      spinLeft(leftRightPos * -1);
     }
 
     //Stops the while(true) loop, in case something goes wrong and robot goes crazy
-    if(stopProgram.pressing()) break;
+    if(stopProgram().pressing()) break;
   }
 }
 
@@ -221,5 +206,5 @@ int main()
 {
   vexcodeInit();
   manualControl();
-  return 0;
+  if(stopProgram().pressing()) return 0;
 }
