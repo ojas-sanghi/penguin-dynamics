@@ -67,19 +67,6 @@ void setDriveVel(int vel = 0)
 }
 
 /*
-  Changes the drive velocity by the parameter, avoids negatives and values above 100
-*/
-void changeDriveVel(int amount)
-{
-  int fAmt = robotVel() + amount;
-
-  if(fAmt <= 0) fAmt = 0;
-  else if(fAmt >= 100) fAmt = 100;
-
-  setDriveVel(fAmt);
-}
-
-/*
   Sets the turn velocity to the parameter
 */
 void setTurnVel(int vel = 100)
@@ -119,13 +106,17 @@ void turn(int vel = 0)
   Drivetrain.turn(turnDir);
 }
 
+bool incr() {return bIncrVel().pressing();}
+bool decr() {return bDecrVel().pressing();}
+bool max() {return bMaxVel().pressing();}
+bool zero() {return bZeroVel().pressing();}
+
 /*
   Method to be called during manual control period
 */
 void manualControl()
 {
   int driveAxisPos, turnAxisPos;
-  //bool incr = false, decr = false, max = false, zero = false;
 
   setDriveVel(defaultVel());
   setTurnVel();
@@ -133,30 +124,23 @@ void manualControl()
   while(true)
   {
     //Stop!
-    //if(bEnd().pressing()) break;
+    if(bEnd().pressing()) break;
 
     //Update axis positions
     driveAxisPos = axisDrive().position();
     turnAxisPos = axisTurn().position();
 
-    /*Update if velocity buttons have been clicked
-    incr = bIncrVel().pressing();
-    decr = bDecrVel().pressing();
-    max = bMaxVel().pressing();
-    zero = bZeroVel().pressing();
-
     //Velocity Modifying Buttons - if any are clicked the while loop will skip driving and stuff
-    if(incr) changeDriveVel(5);
-    if(decr) changeDriveVel(-5);
-    if(max) setDriveVel(100);
-    if(zero) stopAll();
+    if(incr()) driveAxisPos += 5;
+    if(decr()) driveAxisPos -= 5;
+    if(max()) driveAxisPos = 100;
+    if(zero()) stopAll();
 
-    if(incr || decr || max || zero)
+    if(incr() || decr() || max() || zero())
     {
-      incr = false; decr = false; max = false; zero = false;
       Controller1.rumble(rumbleShort);
       continue;
-    }*/
+    }
 
     //If neither axis is in use, don't do anything
     if(driveAxisPos == 0 && turnAxisPos == 0) stopAll();
@@ -186,7 +170,7 @@ void autonomousControl()
 int main() 
 {
   vexcodeInit();
-
+  manualControl();
   /* Whenever ready
   Competition.drivercontrol(manualControl); 
   Competition.autonomous(autonomousControl);
