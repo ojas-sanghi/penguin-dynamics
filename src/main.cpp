@@ -124,11 +124,7 @@ void manualControl()
   while(true)
   {
     //Stop!
-    if(bEnd().pressing()) break;
-
-    //Update axis positions
-    driveAxisPos = axisDrive().position();
-    turnAxisPos = axisTurn().position();
+    if(bEnd().pressing()) break;    
 
     //Velocity Modifying Buttons - if any are clicked the while loop will skip driving and stuff
     if(incr()) driveAxisPos += 5;
@@ -140,6 +136,12 @@ void manualControl()
     {
       Controller1.rumble(rumbleShort);
       continue;
+    }
+    else
+    {
+      //Update axis positions, if none of the velocity changing buttons are clicked
+      driveAxisPos = axisDrive().position();
+      turnAxisPos = axisTurn().position();
     }
 
     //If neither axis is in use, don't do anything
@@ -164,7 +166,7 @@ void manualControl()
 */
 void autonomousControl()
 {
-
+  
 }
 
 int main() 
@@ -175,7 +177,5 @@ int main()
   Competition.drivercontrol(manualControl); 
   Competition.autonomous(autonomousControl);
   */
-
-  manualControl();
   return 0;
 }
