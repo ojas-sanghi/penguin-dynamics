@@ -11,14 +11,14 @@ brain  Brain;
 controller Controller1 = controller(primary);
 motor LeftDriveSmart = motor(PORT1, ratio18_1, false);
 motor RightDriveSmart = motor(PORT10, ratio18_1, true);
-drivetrain Drivetrain = drivetrain(LeftDriveSmart, RightDriveSmart, 299.24, 295, 165, mm, 1);
+drivetrain Drivetrain = drivetrain(LeftDriveSmart, RightDriveSmart, 319.19, 295, 130, mm, 1);
 motor LeftIntake = motor(PORT13, ratio18_1, false);
 motor RightIntake = motor(PORT20, ratio18_1, false);
-motor StackMotor = motor(PORT16, ratio18_1, false);
+motor ReverseStack = motor(PORT16, ratio18_1, false);
 
 // VEXcode generated functions
-// define variable for remote controller enable/disable
-bool RemoteControlCodeEnabled = true;
+
+
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Text.
