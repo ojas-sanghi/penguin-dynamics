@@ -24,14 +24,15 @@ using namespace vex;
 
 //<-------------------------Global Variables------------------------->
 
-vex::competition Competition;
+competition Competition;
 
-controller::axis axisDrive = Controller1.Axis2;
-controller::axis axisTurn = Controller1.Axis4;
+controller::axis axisDrive() {return Controller1.Axis2;}
 
-controller::button bIntake = Controller1.ButtonL2;
-controller::button bOuttake = Controller1.ButtonR2;
-controller::button bReverseStack = Controller1.ButtonUp;
+controller::axis axisTurn() {return Controller1.Axis4;}
+controller::axis axisRevStack() {return Controller1.Axis3;}
+
+controller::button bIntake() {return Controller1.ButtonL2;}
+controller::button bOuttake() {return Controller1.ButtonR2;}
 
 bool inPressed = false;
 bool outPressed = false;
@@ -43,7 +44,6 @@ bool outPressed = false;
 */
 void stopDrive()
 {
-  Drivetrain.setStopping(brake); //Options: brake, coast, hold
   Drivetrain.stop();
 }
 
@@ -88,8 +88,8 @@ void drive(int axisPos)
 {
   directionType driveDir;
 
-  if(axisPos > 0) driveDir = vex::forward;
-  else if(axisPos < 0) driveDir = vex::reverse;
+  if(axisPos > 0) driveDir = forward;
+  else if(axisPos < 0) driveDir = reverse;
   else return;
 
   Drivetrain.drive(driveDir);
@@ -102,8 +102,8 @@ void turn(int axisPos)
 {
   turnType turnDir;
 
-  if(axisPos > 0) turnDir = vex::right;
-  else if(axisPos < 0) turnDir = vex::left;
+  if(axisPos > 0) turnDir = right;
+  else if(axisPos < 0) turnDir = left;
   else return;
   
   Drivetrain.turn(turnDir);
@@ -164,9 +164,10 @@ void deactivateOuttake()
   Turns on the reverse stack motor, so blocks move outward
   Velocity is set in the main method
 */
-void activateReverseStack()
+void activateReverseStack(int dir)
 {
-  ReverseStack.spin(forward);
+  if (dir == 1) ReverseStack.spin(forward);
+  if (dir == -1) ReverseStack.spin(reverse);
 }
 
 /*
@@ -199,7 +200,7 @@ void manual()
   int counter = 0;
 
   //Initializing axis position variables
-  int driveAxisPos, turnAxisPos;
+  int driveAxisPos, turnAxisPos, revStackPos;
 
   //Setting default velocities
   int gearVel = 100;
@@ -212,8 +213,10 @@ void manual()
   ReverseStack.setVelocity(gearVel, percent);
 
   //Setting brake modes
+  Drivetrain.setStopping(brake);
   LeftIntake.setStopping(hold);
   RightIntake.setStopping(hold);
+  ReverseStack.setStopping(hold);
 
   //Real Controls
   while(true)
@@ -221,11 +224,13 @@ void manual()
     counter++;
 
     //Update axis positions
-    driveAxisPos = axisDrive.position();
-    turnAxisPos = axisTurn.position();
+    driveAxisPos = axisDrive().position();
+    turnAxisPos = axisTurn().position();
+    revStackPos = axisRevStack().position();
 
     //Check if neither driving-related axis is in use
     if(driveAxisPos == 0 && turnAxisPos == 0) stopDrive();
+    if (revStackPos == 0) deactivateReverseStack();
 
     //Drive
     if(driveAxisPos != 0) drive(driveAxisPos);
@@ -233,14 +238,14 @@ void manual()
     //Turn
     if(turnAxisPos != 0) turn(turnAxisPos);
 
-    //Intakes and Reverse Stack
-    bIntake.pressed(activateIntake);
-    bOuttake.pressed(activateOuttake);
-    bReverseStack.pressed(activateReverseStack);
+    if (revStackPos != 0) activateReverseStack(revStackPos);
 
-    bIntake.released(deactivateIntake);
-    bOuttake.released(deactivateOuttake);
-    bReverseStack.released(deactivateReverseStack);
+    //Intakes and Reverse Stack
+    bIntake().pressed(activateIntake);
+    bOuttake().pressed(activateOuttake);
+
+    bIntake().released(deactivateIntake);
+    bOuttake().released(deactivateOuttake);
 
     //Tick Time
     waitUntil(!Drivetrain.isMoving());
