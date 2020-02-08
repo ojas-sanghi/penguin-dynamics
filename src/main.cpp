@@ -1,9 +1,9 @@
 /*----------------------------------------------------------------------------*/
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
-/*    Author:       C:\Users\1301261566                                       */
-/*    Created:      Thu Nov 21 2019                                           */
-/*    Description:  Intake                                                    */
+/*    Author:       Saptarshi Mallick, Ojas Sanghi, Khoa Ho                   */
+/*    Created:      Sat Jan 25 2020                                           */
+/*    Description:  VexCode V5 Text Program for Penguin Dynamics              */
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
 
@@ -14,185 +14,238 @@
 // Drivetrain           drivetrain    1, 10           
 // LeftIntake           motor         13              
 // RightIntake          motor         20              
-// StackMotor           motor         16              
+// ReverseStack         motor         16              
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
+#include <cmath>
 
 using namespace vex;
 
-vex::competition Competition;
+//<-------------------------Global Variables------------------------->
 
-//Main vars
-int defaultVel() {return 75;}
-int robotVel(){return Drivetrain.velocity(percent);}
+competition Competition;
 
-  //Axes
 controller::axis axisDrive() {return Controller1.Axis2;}
+
 controller::axis axisTurn() {return Controller1.Axis4;}
-  //Stop program running
-controller::button bEnd() {return Controller1.ButtonY;}
+controller::axis axisRevStack() {return Controller1.Axis3;}
 
 controller::button bIntake() {return Controller1.ButtonL2;}
-controller::button bOutput() {return Controller1.ButtonR2;}
+controller::button bOuttake() {return Controller1.ButtonR2;}
 
-controller::button bStack() {return Controller1.ButtonUp;}
+bool inPressed = false;
+bool outPressed = false;
+
+//<--------------Basic Robot Functions and Stuff Code---------------->
 
 /*
-  Stops all motors
-  @param instant Optional parameter to change the method of braking (hold means the wheels stop instantly, brake is the wheels slow down gradually (normal behavior))
+  Stops the drivetrain from moving
 */
-void stopAll(bool instant = false)
+void stopDrive()
 {
-   Drivetrain.setStopping(instant ? hold : brake);
   Drivetrain.stop();
 }
 
 /*
-  Sets the drive velocity to the parameter
+  Sets the Driving Velocity to the parameter
+  Limits the velocity to a range between a configured range so movements are maybe smoother
 */
-void setDriveVel(int vel = 0)
+void setDriveVel(int vel)
 {
-  int absVel = vel < 0 ? vel * -1 : vel;
-  
-  if(absVel == 0) return;
-  
-  Drivetrain.setDriveVelocity(absVel, percent);
+  int realVel = std::abs(vel);
+
+  //Change the velocity to some value between the configured range
+  int rangeMax = 90;
+  int rangeMin = 10;
+
+  realVel = realVel > rangeMax ? rangeMax : (realVel < rangeMin ? rangeMin : realVel);
+
+  Drivetrain.setDriveVelocity(realVel, percent);
 }
 
 /*
-  Sets the turn velocity to the parameter
+  Sets the Turning Velocity to the parameter
+  Limits the velocity to a range between a configured range so movements are maybe smoother
 */
-void setTurnVel(int vel = 100)
+void setTurnVel(int vel)
 {
-  int absVel = vel < 0 ? vel * -1 : vel;
+  int realVel = std::abs(vel);
 
-  if(absVel == 0) return;
+  //Change the velocity to some value between the configured range
+  int rangeMax = 90;
+  int rangeMin = 10;
 
-  Drivetrain.setTurnVelocity(absVel, percent);
+  realVel = realVel > rangeMax ? rangeMax : (realVel < rangeMin ? rangeMin : realVel);
+
+  Drivetrain.setTurnVelocity(realVel, percent);
 }
 
 /*
-  Drives forward or backward
+  Drives (Forward and Backward, Axis 2)
 */
-void drive(int vel = 0)
+void drive(int axisPos)
 {
   directionType driveDir;
 
-  if(vel == 0) return;
-  else if(vel > 0) driveDir = vex::forward;
-  else driveDir = vex::reverse;
+  if(axisPos > 0) driveDir = forward;
+  else if(axisPos < 0) driveDir = reverse;
+  else return;
 
   Drivetrain.drive(driveDir);
 }
 
 /*
-  Turns left or right
+  Turns (Left and Right, Axis 4)
 */
-void turn(int vel = 0)
+void turn(int axisPos)
 {
   turnType turnDir;
 
-  if(vel == 0) return;
-  else if (vel > 0) turnDir = vex::right;
-  else turnDir = vex::left;
-
+  if(axisPos > 0) turnDir = right;
+  else if(axisPos < 0) turnDir = left;
+  else return;
+  
   Drivetrain.turn(turnDir);
 }
 
-void turnIntake() {
+/*
+  Turns the intakes so that they spin blocks inwards
+  Velocity is set in the main method
+*/
+void activateIntake()
+{
   LeftIntake.spin(forward);
   RightIntake.spin(reverse);
 }
 
-void turnOutput() {
+/*
+  Turns the intakes so that they spin blocks outwards
+  Velocity is set in the main method
+*/
+void activateOuttake()
+{
   LeftIntake.spin(reverse);
   RightIntake.spin(forward);
 }
 
-// Stopping methods for the intake motors
+/*
+  Following methods safely stop the Intakes
+*/
 
-bool inPressed = false;
-bool outPressed = false;
-
-void appropriatelyStopIntake() {
-  if (!inPressed && !outPressed) {
-    LeftIntake.stop();
-    RightIntake.stop();
-  }
-}
-
-void releaseIn() {
-  inPressed = false;
-  appropriatelyStopIntake();
-}
-
-void releaseOut() {
-  outPressed = false;
-  appropriatelyStopIntake();
-}
-
-// Not preferred, only used in auton, when we know for a fact we want to stop all the motors
-void stopAllIntakes() {
+//Stop intake gears (only directly called in autonomous)
+void stopIntakes()
+{
   LeftIntake.stop();
   RightIntake.stop();
 }
 
-// Movement methods for the stacking motor
-
-void turnStackMotor() {
-  StackMotor.spin(forward);
+//Stop intake gears, but check for the buttons as well
+void stopIntakesManual()
+{
+  if(!inPressed && !outPressed) stopIntakes();
 }
 
-void stopStackMotor() {
-  StackMotor.stop();
+//Release callback for Intake
+void deactivateIntake()
+{
+  inPressed = false;
+  stopIntakesManual();
+}
+
+//Release callback for Outtake
+void deactivateOuttake()
+{
+  outPressed = false;
+  stopIntakesManual();
 }
 
 /*
-  Method to be called during manual control period
+  Turns on the reverse stack motor, so blocks move outward
+  Velocity is set in the main method
 */
-void manualControl()
+void activateReverseStack(int dir)
 {
-  int driveAxisPos, turnAxisPos;
+  if (dir == 1) ReverseStack.spin(forward);
+  if (dir == -1) ReverseStack.spin(reverse);
+}
 
-  setDriveVel(defaultVel());
-  setTurnVel();
+/*
+  Deactivates the reverse stack motor
+*/
+void deactivateReverseStack()
+{
+  ReverseStack.stop();
+}
 
+/*
+  Stops all motors (Drivetrain and Intake)
+*/
+void stopAll()
+{
+  stopDrive();
+  stopIntakes();
+  deactivateReverseStack();
+}
+
+
+//<--------------Competition-Related Code---------------->
+
+/*
+  To be run during manual control period
+*/
+void manual()
+{
+  //Counts loop times
+  int counter = 0;
+
+  //Initializing axis position variables
+  int driveAxisPos, turnAxisPos, revStackPos;
+
+  //Setting default velocities
+  int gearVel = 100;
+  int drivetrainVel = 85;
+
+  setDriveVel(drivetrainVel);
+  setTurnVel(drivetrainVel);
+  RightIntake.setVelocity(gearVel, percent);
+  LeftIntake.setVelocity(gearVel, percent);
+  ReverseStack.setVelocity(gearVel, percent);
+
+  //Setting brake modes
+  Drivetrain.setStopping(brake);
   LeftIntake.setStopping(hold);
   RightIntake.setStopping(hold);
+  ReverseStack.setStopping(hold);
 
-  // Note: intake motors' velocities are set in main()
-  StackMotor.setVelocity(100, percent);
-
+  //Real Controls
   while(true)
   {
-    //Stop!
-    if(bEnd().pressing()) break;
+    counter++;
 
     //Update axis positions
     driveAxisPos = axisDrive().position();
     turnAxisPos = axisTurn().position();
+    revStackPos = axisRevStack().position();
 
-    //If neither axis is in use, don't do anything
-    if(driveAxisPos == 0 && turnAxisPos == 0) stopAll();
-    
+    //Check if neither driving-related axis is in use
+    if(driveAxisPos == 0 && turnAxisPos == 0) stopDrive();
+    if (revStackPos == 0) deactivateReverseStack();
+
     //Drive
     if(driveAxisPos != 0) drive(driveAxisPos);
 
     //Turn
     if(turnAxisPos != 0) turn(turnAxisPos);
 
-    //Intake
-    bIntake().pressed(turnIntake);
-    bOutput().pressed(turnOutput);
+    if (revStackPos != 0) activateReverseStack(revStackPos);
 
-    bIntake().released(releaseIn);
-    bOutput().released(releaseOut);
+    //Intakes and Reverse Stack
+    bIntake().pressed(activateIntake);
+    bOuttake().pressed(activateOuttake);
 
-    // Stacking motor
-    bStack().pressed(turnStackMotor);
-
-    bStack().released(stopStackMotor);
+    bIntake().released(deactivateIntake);
+    bOuttake().released(deactivateOuttake);
 
     //Tick Time
     waitUntil(!Drivetrain.isMoving());
@@ -203,44 +256,113 @@ void manualControl()
 }
 
 /*
-  Method to be called during autonomous period
+  To be run during autonomous control period
 */
-void autonomousControl()
+void auton()
 {
   setDriveVel(75);
+  setTurnVel(100);
 
-  // Begin turning output motors
-  turnOutput();
+  //Turn on outtake
+  activateOuttake();
 
-  // Drop off block
+  //Drop off one block and return
   Drivetrain.driveFor(forward, 24, inches);
-  wait(2000, msec);
+  wait(1500, msec);
   Drivetrain.driveFor(reverse, 30, inches);
 
-  // Stop output motors
-  stopAllIntakes();
+  //Reorient to face forwards
+  Drivetrain.turnFor(270, degrees);
 
-  // Turn 180, take in block
-  Drivetrain.turnFor(left, 160, degrees);
-  turnIntake();
-  Drivetrain.driveFor(forward, 30, inches);
+  /* Experimental Old Stuff (Don't we want to change strategy??)
+    // Stop output motors
+    stopAllIntakes();
 
-  // Stop input motors
-  stopAllIntakes();
+    // Turn 180, take in block
+    Drivetrain.turnFor(left, 160, degrees);
+    turnIntake();
+    Drivetrain.driveFor(forward, 30, inches);
+
+    // Stop input motors
+    stopAllIntakes();
+  */
 }
+
+/*
+  NOT FOR USE IN OFFICIAL COMPETITION
+  This is for when we want to simulate a competition, for testing purposes
+*/
+void testAutonManual()
+{
+  Brain.Screen.print("Starting Autonomous");
+
+  auton();
+
+  Brain.Screen.clearScreen();
+  Brain.Screen.print("Starting Manual");
+  wait(500, msec);
+
+  manual();
+  
+  Brain.Screen.clearScreen();
+}
+
+/*
+  Quick Reference of all method names and what they do:
+
+  stopDrive() – stop only the wheel motors
+  stopIntakes() – stop intake gears w/o checking for the buttons
+  stopIntakesManual() – stop intake gears by checking for the buttons
+  stopAll() – stops all motors: wheels, intakes, reverse stack
+
+  setDriveVel() – set drive velocity
+  setTurnVel() – set turn velocity
+
+  drive() – drive w/Axis 2
+  turn() – turn w/Axis 4
+
+  activateIntake() – turn on intake (blocks go in)
+  deactivateIntake() – turn off intake
+
+  activateOuttake() – turn on outtake (blocks go out)
+  deactivateOuttake() – turn off outtake
+
+  activateReverseStack() – turn on rev. stack (blocks go out the back)
+  deactivateReverseStack() – turn off rev. stack
+
+  manual() – Driver Control period
+  auton() – Autonomous Control Period
+  testAutonManual() – when we practice, this runs both auton then manual right after 
+
+  Vars (no more parantheses need, ex. axisDrive() is now axisDrive):
+  Competition – competition object
+
+  axisDrive – driving axis
+  axisTurn – turning axis
+
+  bIntake – button for intake (blocks go in)
+  bOuttake – button for outtake (blocks go out)
+  bReverseStack – button for reverse stack (blocks go out back)
+*/
 
 int main() 
 {
+  //Initializing robot configuration, must be run first
   vexcodeInit();
 
-  LeftIntake.setVelocity(100, percent);
-  RightIntake.setVelocity(100, percent);
+  //Set Intake and Reverse Stack Motor Velocities
+  int gearVel = 100;
 
-  //autonomousControl();
-  //manualControl();
-  
-  Competition.autonomous(autonomousControl);
-  Competition.drivercontrol(manualControl);
+  RightIntake.setVelocity(gearVel, percent);
+  LeftIntake.setVelocity(gearVel, percent);
+  ReverseStack.setVelocity(gearVel, percent);
+
+  //Uncomment for specific testing purposes
+  //testAutonManual();
+
+  //Needed for Competition
+  Competition.autonomous(auton);
+  Competition.drivercontrol(manual);
+
   return 0;
 }
-

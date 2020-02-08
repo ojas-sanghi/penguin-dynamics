@@ -7,7 +7,7 @@ extern controller Controller1;
 extern drivetrain Drivetrain;
 extern motor LeftIntake;
 extern motor RightIntake;
-extern motor StackMotor;
+extern motor ReverseStack;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Text.
